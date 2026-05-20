@@ -742,8 +742,9 @@ async function doDelete() {
   closeModal();
   setSaving(true);
   try {
-    await apiWrite({ action:"delete", id: pendingDeleteId });
-    DB = DB.filter(e=>e.id!==pendingDeleteId);
+    const res = await apiWrite({ action:"delete", id: pendingDeleteId });
+    if (res && res.error) throw new Error(res.error);
+    DB = DB.filter(e => String(e.id) !== String(pendingDeleteId));
     renderAll();
     showToast("Removido.", "err");
     if (document.getElementById("view-form").style.display !== "none") switchView("lista");
