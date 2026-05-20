@@ -486,21 +486,23 @@ async function apiFetch(params) {
   return resp.json();
 }
 
-async function apiPost(body) {
-  const url = getApiUrl();
-  // Apps Script não aceita POST direto com fetch por CORS — usamos GET com jsonp trick via no-cors
-  // Solução robusta: encapsular tudo em GET com action no querystring
-  const resp = await fetch(url + "?action=post&payload=" + encodeURIComponent(JSON.stringify(body)));
-  return resp.json();
-}
-
-// Apps Script com CORS funciona melhor via GET para leitura e POST via fetch para escrita
-// Adaptamos o Code.gs para aceitar payload via GET também
+// Todas as operações via GET com parâmetros separados (Apps Script não suporta POST com CORS)
 async function apiWrite(body) {
   const url = getApiUrl();
   if (!url) throw new Error("URL não configurada");
-  // POST via fetch com mode no-cors não retorna body — usamos GET com payload
-  const resp = await fetch(url + "?payload=" + encodeURIComponent(JSON.stringify(body)));
+
+  const params = new URLSearchParams();
+  params.set("action", body.action);
+
+  if (body.action === "delete") {
+    // delete só precisa do id
+    params.set("id", body.id);
+  } else if (body.data) {
+    // create e update mandam data como JSON
+    params.set("data", JSON.stringify(body.data));
+  }
+
+  const resp = await fetch(url + "?" + params.toString());
   const text = await resp.text();
   try { return JSON.parse(text); } catch { return { ok: true }; }
 }
