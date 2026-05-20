@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EAZ — Gestão de Estagiários</title>
+<style>
+  /* ── RESET & BASE ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --gold:    #c9a84c;
+    --gold-dk: #8b6914;
+    --bg:      #0a0f1e;
+    --bg2:     #0d1526;
+    --bg3:     #131929;
+    --border:  #c9a84c22;
+    --text:    #e2d5b5;
+    --muted:   #64748b;
+    --sub:     #94a3b8;
+    --red:     #f87171;
+    --red-bg:  #450a0a;
+    --orange:  #fb923c;
+    --ora-bg:  #431407;
+    --yellow:  #facc15;
+    --yel-bg:  #422006;
+    --green:   #4ade80;
+    --grn-bg:  #052e16;
+    --input-border: #334155;
+  }
+  body { background: var(--bg); color: var(--text); font-family: Georgia, serif; min-height: 100vh; }
+  input, select, textarea, button { font-family: Georgia, serif; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--gold) !important; }
+  button { cursor: pointer; }
+
+  /* ── LAYOUT ── */
+  #app { display: flex; flex-direction: column; min-height: 100vh; }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 28px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo { display: flex; align-items: center; gap: 14px; }
+  .logo-badge {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-dk));
+    border-radius: 4px; display: flex; align-items: center; justify-content: center;
+    font-weight: bold; color: var(--bg); font-size: 15px;
+  }
+  .logo-name { font-size: 17px; font-weight: bold; color: var(--gold); letter-spacing: 2px; }
+  .logo-sub  { font-size: 11px; color: var(--muted); letter-spacing: 1px; margin-top: 2px; }
+  nav { display: flex; gap: 8px; align-items: center; }
+  .nav-btn {
+    background: transparent; border: 1px solid transparent;
+    color: var(--sub); padding: 6px 14px; border-radius: 5px; font-size: 13px; transition: all .15s;
+  }
+  .nav-btn.active { background: #c9a84c22; border-color: var(--gold); color: var(--gold); }
+  .nav-btn:hover:not(.active) { border-color: var(--input-border); color: var(--text); }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--gold), var(--gold-dk));
+    border: none; color: var(--bg); padding: 8px 18px; border-radius: 5px;
+    font-size: 13px; font-weight: bold; transition: opacity .15s;
+  }
+  .btn-primary:hover { opacity: .85; }
+  .btn-sec {
+    background: transparent; border: 1px solid var(--input-border);
+    color: var(--sub); padding: 7px 15px; border-radius: 5px; font-size: 13px;
+  }
+  .btn-sec:hover { border-color: var(--gold); color: var(--text); }
+  .btn-danger {
+    background: var(--red-bg); border: 1px solid var(--red);
+    color: var(--red); padding: 7px 15px; border-radius: 5px; font-size: 13px;
+  }
+  .btn-sm {
+    background: transparent; border: 1px solid var(--input-border);
+    color: var(--sub); padding: 4px 10px; border-radius: 4px; font-size: 12px;
+  }
+  .btn-sm-danger {
+    background: transparent; border: 1px solid #f8717133;
+    color: var(--red); padding: 4px 8px; border-radius: 4px; font-size: 14px;
+  }
+
+  /* ── MAIN ── */
+  main { flex: 1; padding: 24px 28px; max-width: 1400px; margin: 0 auto; width: 100%; }
+
+  /* ── CARD ── */
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 20px; }
+  .card-title { font-size: 11px; color: var(--gold); letter-spacing: 2px; font-weight: bold; text-transform: uppercase; margin-bottom: 16px; }
+
+  /* ── KPI GRID ── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 28px; }
+  .kpi-card { background: var(--bg2); border-radius: 8px; padding: 20px 22px; cursor: pointer; border: 1px solid transparent; transition: border-color .2s; }
+  .kpi-card:hover { border-color: var(--kpi-color); }
+  .kpi-label { font-size: 12px; color: var(--muted); margin-bottom: 12px; letter-spacing: .5px; }
+  .kpi-value { font-size: 36px; font-weight: bold; color: var(--kpi-color); }
+
+  /* ── CHARTS GRID ── */
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+
+  /* ── TABLE ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead tr { border-bottom: 2px solid #c9a84c44; }
+  thead th { text-align: left; padding: 10px 8px; color: var(--gold); font-weight: bold; font-size: 11px; letter-spacing: 1px; white-space: nowrap; }
+  tbody tr { border-bottom: 1px solid #ffffff08; cursor: pointer; transition: background .12s; }
+  tbody tr:hover { background: var(--bg3); }
+  tbody td { padding: 10px 8px; }
+
+  /* ── STATUS BADGE ── */
+  .badge { padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; white-space: nowrap; }
+
+  /* ── FILTERS ── */
+  .filters { display: flex; gap: 12px; margin-bottom: 20px; align-items: center; flex-wrap: wrap; }
+  .input-field {
+    background: var(--bg); border: 1px solid var(--input-border);
+    border-radius: 5px; color: var(--text); padding: 9px 12px; font-size: 13px; font-family: Georgia,serif;
+  }
+  .input-field.wide { flex: 1; min-width: 200px; }
+
+  /* ── FORM ── */
+  .form-wrap { max-width: 900px; margin: 0 auto; }
+  .form-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+  .form-section { margin-bottom: 28px; }
+  .form-section-title {
+    font-size: 11px; color: var(--gold); letter-spacing: 2px; font-weight: bold;
+    text-transform: uppercase; margin-bottom: 16px; padding-bottom: 8px;
+    border-bottom: 1px solid #c9a84c22;
+  }
+  .form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .field { margin-bottom: 0; }
+  .field label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; letter-spacing: .5px; }
+  .field input, .field select, .field textarea {
+    width: 100%; background: var(--bg); border: 1px solid var(--input-border);
+    border-radius: 5px; color: var(--text); padding: 9px 12px; font-size: 13px; font-family: Georgia,serif;
+  }
+  .field textarea { resize: vertical; height: 80px; }
+  .form-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+  .form-actions-right { display: flex; gap: 12px; margin-left: auto; }
+
+  /* ── BAR CHART ── */
+  .bar-row { margin-bottom: 10px; }
+  .bar-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+  .bar-track { height: 6px; background: #1e293b; border-radius: 3px; overflow: hidden; }
+  .bar-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold-dk)); border-radius: 3px; transition: width .4s; }
+
+  /* ── VENC ROW ── */
+  .venc-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #ffffff0d; cursor: pointer; }
+  .venc-row:last-child { border-bottom: none; }
+  .venc-name { font-size: 13px; color: var(--text); font-weight: bold; }
+  .venc-sub  { font-size: 11px; color: var(--muted); }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; top: 20px; right: 20px; z-index: 9999;
+    padding: 12px 20px; border-radius: 6px; font-size: 14px;
+    display: none; border: 1px solid; animation: fadeIn .2s;
+  }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+
+  /* ── MODAL ── */
+  #modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.8);
+    z-index: 9998; display: none; align-items: center; justify-content: center;
+  }
+  #modal-overlay.open { display: flex; }
+  .modal-box { background: var(--bg3); border: 1px solid var(--gold); border-radius: 8px; padding: 32px; max-width: 400px; text-align: center; }
+
+  /* ── SPINNER ── */
+  #splash {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9997; gap: 16px;
+  }
+  .spinner { width: 36px; height: 36px; border: 3px solid #c9a84c33; border-top-color: var(--gold); border-radius: 50%; animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── CONFIG SCREEN ── */
+  #config-screen { display: none; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 20px; text-align: center; }
+  .config-box { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 40px; max-width: 560px; width: 100%; }
+  .config-title { font-size: 20px; color: var(--gold); margin-bottom: 8px; letter-spacing: 1px; }
+  .config-sub { font-size: 13px; color: var(--muted); margin-bottom: 28px; line-height: 1.6; }
+  .config-input { width: 100%; background: var(--bg); border: 1px solid var(--input-border); border-radius: 6px; color: var(--text); padding: 12px 14px; font-size: 13px; font-family: Georgia,serif; margin-bottom: 16px; }
+  .config-hint { font-size: 11px; color: var(--muted); margin-top: -10px; margin-bottom: 16px; text-align: left; }
+
+  @media (max-width: 768px) {
+    .kpi-grid { grid-template-columns: repeat(2,1fr); }
+    .charts-grid { grid-template-columns: 1fr; }
+    .form-grid-2 { grid-template-columns: 1fr; }
+    header { flex-direction: column; gap: 12px; }
+    nav { flex-wrap: wrap; justify-content: center; }
+  }
+</style>
+</head>
+<body>
+<div id="splash">
+  <div class="spinner"></div>
+  <div style="color:var(--gold);font-size:16px">Carregando dados...</div>
+</div>
+
+<div id="modal-overlay">
+  <div class="modal-box">
+    <div style="font-size:18px;color:var(--red);margin-bottom:12px">Confirmar exclusão</div>
+    <div id="modal-msg" style="font-size:14px;color:var(--sub);margin-bottom:24px"></div>
+    <div style="display:flex;gap:12px;justify-content:center">
+      <button class="btn-sec" onclick="closeModal()">Cancelar</button>
+      <button class="btn-danger" id="modal-confirm-btn">Remover</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div id="app" style="display:none">
+  <header>
+    <div class="logo">
+      <div class="logo-badge">RH</div>
+      <div>
+        <div class="logo-name">ESCRITÓRIO ZVEITER</div>
+        <div class="logo-sub">GESTÃO DE ESTAGIÁRIOS · Google Sheets</div>
+      </div>
+    </div>
+    <nav>
+      <span id="saving-indicator" style="font-size:12px;color:var(--muted);display:none">Salvando...</span>
+      <button class="nav-btn active" data-view="dashboard" onclick="switchView('dashboard')">Dashboard</button>
+      <button class="nav-btn" data-view="lista" onclick="switchView('lista')">Estagiários</button>
+      <button class="nav-btn" data-view="ferias" onclick="switchView('ferias')">Férias</button>
+      <button class="btn-sec" onclick="loadData()" title="Recarregar do Sheets" style="padding:6px 10px">↻</button>
+      <button class="btn-primary" onclick="openNew()" style="margin-left:8px">+ Novo</button>
+      <button class="btn-sec" onclick="switchView('config')" title="Configurações" style="padding:6px 10px">⚙</button>
+    </nav>
+  </header>
+
+  <main>
+    <!-- DASHBOARD -->
+    <div id="view-dashboard">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px" id="today-label"></div>
+      <div class="kpi-grid" id="kpi-grid"></div>
+      <div class="charts-grid">
+        <div class="card">
+          <div class="card-title">Próximos Vencimentos (90 dias)</div>
+          <div id="prox-venc"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Distribuição por Segmento</div>
+          <div id="chart-seg"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Com Aditivo de Contrato</div>
+          <div id="chart-aditivo"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Por Instituição de Ensino</div>
+          <div id="chart-inst"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LISTA -->
+    <div id="view-lista" style="display:none">
+      <div class="filters">
+        <input class="input-field wide" type="text" id="search-input" placeholder="Buscar por nome, segmento ou instituição..." oninput="renderLista()">
+        <select class="input-field" id="filter-seg" onchange="renderLista()" style="min-width:180px">
+          <option value="">Todos os segmentos</option>
+        </select>
+        <span id="result-count" style="font-size:13px;color:var(--muted)"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th><th>Segmento</th><th>Instituição</th>
+              <th>Início</th><th>Fim Contrato</th><th>Status</th><th>Aditivo</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="lista-tbody"></tbody>
+        </table>
+        <div id="lista-empty" style="text-align:center;color:var(--muted);padding:40px;font-size:14px;display:none">Nenhum resultado.</div>
+      </div>
+    </div>
+
+    <!-- FÉRIAS -->
+    <div id="view-ferias" style="display:none">
+      <div style="font-size:16px;color:var(--gold);margin-bottom:20px;font-weight:bold;letter-spacing:1px">CONTROLE DE FÉRIAS</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Nome</th><th>Segmento</th><th>Instituição</th><th>Período de Férias</th><th>Previsão Término Curso</th>
+            </tr>
+          </thead>
+          <tbody id="ferias-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- FORM -->
+    <div id="view-form" style="display:none">
+      <div class="form-wrap">
+        <div class="form-header">
+          <div>
+            <div style="font-size:16px;color:var(--gold);font-weight:bold;letter-spacing:1px" id="form-title">NOVO ESTAGIÁRIO</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px" id="form-subtitle"></div>
+          </div>
+          <button class="btn-sec" onclick="switchView('lista')">← Voltar</button>
+        </div>
+        <div class="card" style="padding:28px">
+          <!-- Dados Pessoais -->
+          <div class="form-section">
+            <div class="form-section-title">Dados Pessoais</div>
+            <div class="field" style="margin-bottom:14px">
+              <label>Nome completo *</label>
+              <input type="text" id="f-nome" placeholder="Nome do estagiário">
+            </div>
+            <div class="form-grid-2" style="margin-bottom:14px">
+              <div class="field">
+                <label>Segmento</label>
+                <input type="text" id="f-segmento" list="seg-list" placeholder="Ex: CEDAE, ESTRATÉGICO...">
+                <datalist id="seg-list">
+                  <option>CEDAE</option><option>CEDAE/BSB</option><option>ESTRATÉGICO</option>
+                  <option>GLOBO</option><option>GLOBO/ESTR</option><option>INFORMÁTICA</option>
+                  <option>REC JUDICIAL</option><option>REC. JUDICIAL</option><option>RJ JULIANE</option>
+                  <option>EAZ</option>
+                </datalist>
+              </div>
+              <div class="field">
+                <label>Instituição de Ensino</label>
+                <input type="text" id="f-instituicao" list="inst-list" placeholder="Ex: PUC, IBMEC...">
+                <datalist id="inst-list">
+                  <option>PUC</option><option>IBMEC</option><option>ESTÁCIO DE SÁ</option>
+                  <option>UNICARIOCA</option><option>CEUB</option><option>CANDIDO MENDES</option>
+                  <option>FAM CENTRO UNIV.</option><option>UFF</option><option>UERJ</option><option>FGV</option>
+                </datalist>
+              </div>
+            </div>
+            <div class="field">
+              <label>Data de ingresso no EAZ</label>
+              <input type="date" id="f-inicioNoEAZ">
+            </div>
+          </div>
+          <!-- Contrato -->
+          <div class="form-section">
+            <div class="form-section-title">Contrato Principal</div>
+            <div class="form-grid-2" style="margin-bottom:14px">
+              <div class="field">
+                <label>Início do Contrato</label>
+                <input type="date" id="f-inicioContrato">
+              </div>
+              <div class="field">
+                <label>Fim do Contrato</label>
+                <input type="date" id="f-fimContrato">
+              </div>
+              <div class="field">
+                <label>Horário (Contrato)</label>
+                <input type="text" id="f-horarioContrato" placeholder="Ex: 13:00 - 19:00">
+              </div>
+              <div class="field">
+                <label>Horário das Aulas</label>
+                <input type="text" id="f-horarioAulas" placeholder="Ex: 7:30 - 11:40">
+              </div>
+            </div>
+            <div class="field">
+              <label>Previsão de Término do Curso</label>
+              <input type="date" id="f-previsaoTerminoCurso">
+            </div>
+          </div>
+          <!-- Aditivo -->
+          <div class="form-section">
+            <div class="form-section-title">Aditivo 1 (se houver)</div>
+            <div class="form-grid-2">
+              <div class="field">
+                <label>Início Aditivo 1</label>
+                <input type="date" id="f-aditivo1Inicio">
+              </div>
+              <div class="field">
+                <label>Fim Aditivo 1</label>
+                <input type="date" id="f-aditivo1Fim">
+              </div>
+            </div>
+          </div>
+          <!-- Férias -->
+          <div class="form-section">
+            <div class="form-section-title">Férias e Observações</div>
+            <div class="field" style="margin-bottom:14px">
+              <label>Período de Férias</label>
+              <input type="text" id="f-ferias" placeholder="Ex: 30/06/2025 a 14/07/2025">
+            </div>
+            <div class="field">
+              <label>Observações</label>
+              <textarea id="f-observacoes" placeholder="Anotações livres..."></textarea>
+            </div>
+          </div>
+          <!-- Actions -->
+          <div class="form-actions">
+            <button class="btn-danger" id="btn-delete" onclick="confirmDelete()" style="display:none">Remover Estagiário</button>
+            <div class="form-actions-right">
+              <button class="btn-sec" onclick="switchView('lista')">Cancelar</button>
+              <button class="btn-primary" id="btn-save" onclick="handleSave()">Adicionar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CONFIG -->
+    <div id="view-config" style="display:none">
+      <div style="display:flex;flex-direction:column;align-items:center;padding-top:40px">
+        <div class="card" style="max-width:560px;width:100%;padding:40px">
+          <div style="font-size:20px;color:var(--gold);margin-bottom:8px;letter-spacing:1px">Configuração</div>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:28px;line-height:1.6">
+            Cole abaixo a URL do seu Google Apps Script implantado como Web App.<br>
+            Ela tem o formato: <code style="color:var(--gold);font-size:11px">https://script.google.com/macros/s/.../exec</code>
+          </div>
+          <div class="field" style="margin-bottom:20px">
+            <label>URL do Apps Script</label>
+            <input type="text" id="config-url" class="input-field" style="width:100%" placeholder="https://script.google.com/macros/s/..." />
+          </div>
+          <button class="btn-primary" style="width:100%" onclick="saveConfig()">Salvar e Conectar</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let DB       = [];
+let editId   = null;
+let pendingDeleteId = null;
+const FIELDS = ["nome","segmento","instituicao","inicioNoEAZ","inicioContrato","fimContrato",
+                "previsaoTerminoCurso","horarioContrato","horarioAulas","aditivo1Inicio",
+                "aditivo1Fim","ferias","observacoes"];
+
+// ═══════════════════════════════════════════════════════
+// CONFIG / API URL
+// ═══════════════════════════════════════════════════════
+function getApiUrl() { return localStorage.getItem("eaz_api_url") || ""; }
+function saveConfig() {
+  const url = document.getElementById("config-url").value.trim();
+  if (!url) { showToast("Cole a URL do Apps Script", "err"); return; }
+  localStorage.setItem("eaz_api_url", url);
+  showToast("URL salva! Carregando dados...");
+  loadData();
+  switchView("dashboard");
+}
+
+// ═══════════════════════════════════════════════════════
+// DATE HELPERS
+// ═══════════════════════════════════════════════════════
+const TODAY = (() => { const d = new Date(); d.setHours(0,0,0,0); return d; })();
+
+function parseDate(s) {
+  if (!s) return null;
+  const d = new Date(s);
+  return isNaN(d) ? null : d;
+}
+function fmt(s) {
+  const d = parseDate(s);
+  return d ? d.toLocaleDateString("pt-BR") : "—";
+}
+function daysUntil(s) {
+  const d = parseDate(s);
+  if (!d) return null;
+  return Math.ceil((d - TODAY) / 86400000);
+}
+function statusOf(e) {
+  const d = daysUntil(e.fimContrato);
+  if (d === null) return { label:"Sem data", color:"#64748b", bg:"#1e293b" };
+  if (d < 0)      return { label:"Vencido",  color:"#f87171", bg:"#450a0a" };
+  if (d <= 30)    return { label:`${d}d`,    color:"#fb923c", bg:"#431407" };
+  if (d <= 90)    return { label:`${d}d`,    color:"#facc15", bg:"#422006" };
+  return           { label:`${d}d`,          color:"#4ade80", bg:"#052e16" };
+}
+
+// ═══════════════════════════════════════════════════════
+// API CALLS
+// ═══════════════════════════════════════════════════════
+async function apiFetch(params) {
+  const url = getApiUrl();
+  if (!url) { switchView("config"); throw new Error("URL não configurada"); }
+  const resp = await fetch(url + "?" + new URLSearchParams(params));
+  return resp.json();
+}
+
+async function apiPost(body) {
+  const url = getApiUrl();
+  // Apps Script não aceita POST direto com fetch por CORS — usamos GET com jsonp trick via no-cors
+  // Solução robusta: encapsular tudo em GET com action no querystring
+  const resp = await fetch(url + "?action=post&payload=" + encodeURIComponent(JSON.stringify(body)));
+  return resp.json();
+}
+
+// Apps Script com CORS funciona melhor via GET para leitura e POST via fetch para escrita
+// Adaptamos o Code.gs para aceitar payload via GET também
+async function apiWrite(body) {
+  const url = getApiUrl();
+  if (!url) throw new Error("URL não configurada");
+  // POST via fetch com mode no-cors não retorna body — usamos GET com payload
+  const resp = await fetch(url + "?payload=" + encodeURIComponent(JSON.stringify(body)));
+  const text = await resp.text();
+  try { return JSON.parse(text); } catch { return { ok: true }; }
+}
+
+async function loadData() {
+  setSaving(true);
+  try {
+    const url = getApiUrl();
+    if (!url) { hideSplash(); switchView("config"); return; }
+    const data = await apiFetch({ action: "list" });
+    if (data.error) throw new Error(data.error);
+    DB = Array.isArray(data) ? data : [];
+    renderAll();
+    showToast("Dados carregados!");
+  } catch(e) {
+    showToast("Erro ao carregar: " + e.message, "err");
+  }
+  hideSplash();
+  setSaving(false);
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════
+function renderAll() {
+  renderDashboard();
+  renderLista();
+  renderFerias();
+  populateSegFilter();
+}
+
+function renderDashboard() {
+  const todayStr = TODAY.toLocaleDateString("pt-BR", { weekday:"long", year:"numeric", month:"long", day:"numeric" });
+  document.getElementById("today-label").innerHTML =
+    `Hoje: ${todayStr} <span style="margin-left:16px;color:#c9a84c66;font-size:12px">Fonte: Google Sheets · ${DB.length} registros</span>`;
+
+  const vencidos = DB.filter(e => { const d=daysUntil(e.fimContrato); return d!==null&&d<0; });
+  const urgentes = DB.filter(e => { const d=daysUntil(e.fimContrato); return d!==null&&d>=0&&d<=30; });
+  const atencao  = DB.filter(e => { const d=daysUntil(e.fimContrato); return d!==null&&d>30&&d<=90; });
+  const ativos   = DB.filter(e => { const d=daysUntil(e.fimContrato); return d!==null&&d>90; });
+
+  const kpis = [
+    { label:"Contratos Vencidos", value:vencidos.length, color:"#f87171" },
+    { label:"Vencem em 30 dias",  value:urgentes.length, color:"#fb923c" },
+    { label:"Vencem em 90 dias",  value:atencao.length,  color:"#facc15" },
+    { label:"Ativos (> 90 dias)", value:ativos.length,   color:"#4ade80" },
+  ];
+  document.getElementById("kpi-grid").innerHTML = kpis.map(k =>
+    `<div class="kpi-card" style="--kpi-color:${k.color};border-color:${k.color}22" onclick="switchView('lista')">
+      <div class="kpi-label">${k.label}</div>
+      <div class="kpi-value" style="color:${k.color}">${k.value}</div>
+    </div>`
+  ).join("");
+
+  // Próximos vencimentos
+  const prox = [...DB].filter(e=>{ const d=daysUntil(e.fimContrato); return d!==null&&d>=0&&d<=90; })
+    .sort((a,b)=>parseDate(a.fimContrato)-parseDate(b.fimContrato));
+  document.getElementById("prox-venc").innerHTML = prox.length ? prox.map(e => {
+    const st=statusOf(e), d=daysUntil(e.fimContrato);
+    return `<div class="venc-row" onclick="openEdit('${e.id}')">
+      <div><div class="venc-name">${e.nome}</div><div class="venc-sub">${e.segmento||""} · ${e.instituicao||""}</div></div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="font-size:12px;color:var(--sub)">${fmt(e.fimContrato)}</div>
+        <div class="badge" style="background:${st.bg};color:${st.color};border:1px solid ${st.color}44">${d===0?"HOJE":st.label}</div>
+      </div>
+    </div>`;
+  }).join("") : `<div style="color:var(--muted);font-size:13px">Nenhum vencimento próximo.</div>`;
+
+  // Segmento
+  const segs = {}; DB.forEach(e=>{ const k=e.segmento||"N/D"; segs[k]=(segs[k]||0)+1; });
+  const segSorted = Object.entries(segs).sort((a,b)=>b[1]-a[1]);
+  const maxSeg = segSorted[0]?.[1]||1;
+  document.getElementById("chart-seg").innerHTML = segSorted.map(([s,c]) =>
+    `<div class="bar-row">
+      <div class="bar-label"><span style="color:var(--text)">${s}</span><span style="color:var(--gold);font-weight:bold">${c}</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${(c/maxSeg)*100}%"></div></div>
+    </div>`
+  ).join("");
+
+  // Aditivo
+  const comAditivo = DB.filter(e=>e.aditivo1Inicio);
+  document.getElementById("chart-aditivo").innerHTML = comAditivo.length ?
+    comAditivo.map(e=>`<div class="venc-row" onclick="openEdit('${e.id}')">
+      <div><div class="venc-name">${e.nome}</div><div class="venc-sub">${e.segmento||""}</div></div>
+      <div style="text-align:right">
+        <div style="font-size:11px;color:var(--gold)">Aditivo 1</div>
+        <div style="font-size:11px;color:var(--sub)">${fmt(e.aditivo1Inicio)} → ${fmt(e.aditivo1Fim)}</div>
+      </div>
+    </div>`).join("") :
+    `<div style="color:var(--muted);font-size:13px">Nenhum aditivo registrado.</div>`;
+
+  // Instituição
+  const inst = {}; DB.forEach(e=>{ const k=e.instituicao||"Não informado"; inst[k]=(inst[k]||0)+1; });
+  document.getElementById("chart-inst").innerHTML = Object.entries(inst).sort((a,b)=>b[1]-a[1]).map(([k,v])=>
+    `<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #ffffff0d;font-size:13px">
+      <span style="color:var(--text)">${k}</span><span style="color:var(--gold);font-weight:bold">${v}</span>
+    </div>`
+  ).join("");
+}
+
+function renderLista() {
+  const q   = document.getElementById("search-input").value.toLowerCase();
+  const seg = document.getElementById("filter-seg").value;
+  const filtered = DB.filter(e => {
+    const mq = !q || (e.nome||"").toLowerCase().includes(q) || (e.segmento||"").toLowerCase().includes(q) || (e.instituicao||"").toLowerCase().includes(q);
+    const ms = !seg || e.segmento === seg;
+    return mq && ms;
+  });
+  document.getElementById("result-count").textContent = `${filtered.length} resultado(s)`;
+  document.getElementById("lista-empty").style.display = filtered.length ? "none" : "block";
+  document.getElementById("lista-tbody").innerHTML = filtered.map(e => {
+    const st = statusOf(e);
+    return `<tr onclick="openEdit('${e.id}')">
+      <td style="color:var(--text);font-weight:bold">${e.nome}</td>
+      <td style="color:var(--sub)">${e.segmento||"—"}</td>
+      <td style="color:var(--sub)">${e.instituicao||"—"}</td>
+      <td style="color:var(--sub);white-space:nowrap">${fmt(e.inicioContrato)}</td>
+      <td style="color:var(--sub);white-space:nowrap">${fmt(e.fimContrato)}</td>
+      <td><span class="badge" style="background:${st.bg};color:${st.color};border:1px solid ${st.color}44">${st.label}</span></td>
+      <td style="color:var(--sub);font-size:12px">${e.aditivo1Inicio?'<span style="color:var(--gold)">✓ Aditivo 1</span>':"—"}</td>
+      <td onclick="event.stopPropagation()">
+        <div style="display:flex;gap:6px">
+          <button class="btn-sm" onclick="openEdit('${e.id}')">Editar</button>
+          <button class="btn-sm-danger" onclick="confirmDeleteById('${e.id}')">×</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+function renderFerias() {
+  const rows = DB.filter(e=>e.ferias||e.previsaoTerminoCurso);
+  document.getElementById("ferias-tbody").innerHTML = rows.map(e=>
+    `<tr onclick="openEdit('${e.id}')">
+      <td style="color:var(--text);font-weight:bold">${e.nome}</td>
+      <td style="color:var(--sub)">${e.segmento||"—"}</td>
+      <td style="color:var(--sub)">${e.instituicao||"—"}</td>
+      <td style="color:var(--yellow);font-size:12px">${e.ferias||"—"}</td>
+      <td style="color:var(--sub)">${fmt(e.previsaoTerminoCurso)}</td>
+    </tr>`
+  ).join("");
+}
+
+function populateSegFilter() {
+  const segs = [...new Set(DB.map(e=>e.segmento).filter(Boolean))].sort();
+  const sel = document.getElementById("filter-seg");
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">Todos os segmentos</option>` + segs.map(s=>`<option value="${s}">${s}</option>`).join("");
+  sel.value = cur;
+}
+
+// ═══════════════════════════════════════════════════════
+// FORM
+// ═══════════════════════════════════════════════════════
+function openNew() {
+  editId = null;
+  FIELDS.forEach(f => {
+    const el = document.getElementById("f-"+f);
+    if (el) el.value = "";
+  });
+  document.getElementById("form-title").textContent = "NOVO ESTAGIÁRIO";
+  document.getElementById("form-subtitle").textContent = "";
+  document.getElementById("btn-save").textContent = "Adicionar";
+  document.getElementById("btn-delete").style.display = "none";
+  switchView("form");
+}
+
+function openEdit(id) {
+  const e = DB.find(x => x.id === id);
+  if (!e) return;
+  editId = id;
+  FIELDS.forEach(f => {
+    const el = document.getElementById("f-"+f);
+    if (el) el.value = e[f] || "";
+  });
+  document.getElementById("form-title").textContent = "EDITAR ESTAGIÁRIO";
+  document.getElementById("form-subtitle").textContent = e.nome;
+  document.getElementById("btn-save").textContent = "Salvar Alterações";
+  document.getElementById("btn-delete").style.display = "inline-block";
+  switchView("form");
+}
+
+function getFormData() {
+  const obj = {};
+  FIELDS.forEach(f => {
+    const el = document.getElementById("f-"+f);
+    obj[f] = el ? el.value.trim() : "";
+  });
+  return obj;
+}
+
+async function handleSave() {
+  const data = getFormData();
+  if (!data.nome) { showToast("Nome é obrigatório", "err"); return; }
+  setSaving(true);
+  document.getElementById("btn-save").disabled = true;
+  try {
+    if (editId) {
+      data.id = editId;
+      const res = await apiWrite({ action:"update", data });
+      if (res.error) throw new Error(res.error);
+      const idx = DB.findIndex(e=>e.id===editId);
+      if (idx>=0) DB[idx] = { ...DB[idx], ...data };
+      showToast("Atualizado com sucesso!");
+    } else {
+      const res = await apiWrite({ action:"create", data });
+      if (res.error) throw new Error(res.error);
+      DB.push(res.data || { ...data, id: Date.now().toString() });
+      showToast("Estagiário adicionado!");
+    }
+    renderAll();
+    switchView("lista");
+  } catch(e) {
+    showToast("Erro ao salvar: " + e.message, "err");
+  }
+  document.getElementById("btn-save").disabled = false;
+  setSaving(false);
+}
+
+// ═══════════════════════════════════════════════════════
+// DELETE
+// ═══════════════════════════════════════════════════════
+function confirmDelete() { confirmDeleteById(editId); }
+function confirmDeleteById(id) {
+  const e = DB.find(x=>x.id===id);
+  if (!e) return;
+  pendingDeleteId = id;
+  document.getElementById("modal-msg").innerHTML = `Remover <strong style="color:var(--text)">${e.nome}</strong>? Essa ação não pode ser desfeita.`;
+  document.getElementById("modal-confirm-btn").onclick = doDelete;
+  document.getElementById("modal-overlay").classList.add("open");
+}
+function closeModal() {
+  document.getElementById("modal-overlay").classList.remove("open");
+  pendingDeleteId = null;
+}
+async function doDelete() {
+  closeModal();
+  setSaving(true);
+  try {
+    await apiWrite({ action:"delete", id: pendingDeleteId });
+    DB = DB.filter(e=>e.id!==pendingDeleteId);
+    renderAll();
+    showToast("Removido.", "err");
+    if (document.getElementById("view-form").style.display !== "none") switchView("lista");
+  } catch(e) {
+    showToast("Erro ao remover: "+e.message, "err");
+  }
+  setSaving(false);
+}
+
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+function switchView(v) {
+  ["dashboard","lista","ferias","form","config"].forEach(x => {
+    document.getElementById("view-"+x).style.display = x===v ? "block" : "none";
+  });
+  document.querySelectorAll(".nav-btn").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.view === v);
+  });
+  if (v === "config") {
+    document.getElementById("config-url").value = getApiUrl();
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════
+let toastTimer;
+function showToast(msg, type="ok") {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.style.background = type==="err" ? "#450a0a" : "#052e16";
+  t.style.borderColor = type==="err" ? "#f87171" : "#4ade80";
+  t.style.color       = type==="err" ? "#f87171" : "#4ade80";
+  t.style.display = "block";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.style.display="none", 3500);
+}
+function setSaving(v) {
+  document.getElementById("saving-indicator").style.display = v ? "inline" : "none";
+}
+function hideSplash() {
+  document.getElementById("splash").style.display = "none";
+  document.getElementById("app").style.display = "flex";
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+window.addEventListener("DOMContentLoaded", () => {
+  if (!getApiUrl()) {
+    hideSplash();
+    switchView("config");
+  } else {
+    loadData();
+  }
+});
+</script>
+</body>
+</html>
