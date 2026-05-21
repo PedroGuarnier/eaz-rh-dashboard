@@ -287,7 +287,7 @@
         <table>
           <thead>
             <tr>
-              <th>Nome</th><th>Segmento</th><th>Instituição</th><th>Período de Férias</th><th>Previsão Término Curso</th>
+              <th>Nome</th><th>Segmento</th><th>Instituição</th><th>Período de Férias</th><th>Previsão Término Curso</th><th>30 dias</th>
             </tr>
           </thead>
           <tbody id="ferias-tbody"></tbody>
@@ -387,6 +387,14 @@
               <input type="text" id="f-ferias" placeholder="Ex: 30/06/2025 a 14/07/2025">
             </div>
             <div class="field">
+              <label>Cumpriu 30 dias de férias?</label>
+              <select id="f-ferias30">
+                <option value="">Não informado</option>
+                <option value="NÃO">✗ Pendente</option>
+                <option value="SIM">✓ Cumpriu</option>
+              </select>
+            </div>
+            <div class="field">
               <label>Observações</label>
               <textarea id="f-observacoes" placeholder="Anotações livres..."></textarea>
             </div>
@@ -433,7 +441,7 @@ let editId   = null;
 let pendingDeleteId = null;
 const FIELDS = ["nome","segmento","instituicao","inicioNoEAZ","inicioContrato","fimContrato",
                 "previsaoTerminoCurso","horarioContrato","horarioAulas","aditivo1Inicio",
-                "aditivo1Fim","ferias","observacoes"];
+                "aditivo1Fim","ferias","ferias30","observacoes"];
 
 // ═══════════════════════════════════════════════════════
 // CONFIG / API URL
@@ -635,15 +643,44 @@ function renderLista() {
 
 function renderFerias() {
   const rows = DB.filter(e=>e.ferias||e.previsaoTerminoCurso);
-  document.getElementById("ferias-tbody").innerHTML = rows.map(e=>
-    `<tr onclick="openEdit('${e.id}')">
-      <td style="color:var(--text);font-weight:bold">${e.nome}</td>
+  document.getElementById("ferias-tbody").innerHTML = rows.map(e=> {
+    const cumpriu = e.ferias30 === "SIM";
+    return `<tr>
+      <td style="color:var(--text);font-weight:bold;cursor:pointer" onclick="openEdit('${e.id}')">${e.nome}</td>
       <td style="color:var(--sub)">${e.segmento||"—"}</td>
       <td style="color:var(--sub)">${e.instituicao||"—"}</td>
       <td style="color:var(--yellow);font-size:12px">${e.ferias||"—"}</td>
       <td style="color:var(--sub)">${fmt(e.previsaoTerminoCurso)}</td>
-    </tr>`
-  ).join("");
+      <td onclick="event.stopPropagation()">
+        <button onclick="toggleFerias30('${e.id}')" style="
+          background:${cumpriu ? 'var(--grn-bg)' : 'var(--red-bg)'};
+          border:1px solid ${cumpriu ? 'var(--green)' : 'var(--red)'};
+          color:${cumpriu ? 'var(--green)' : 'var(--red)'};
+          padding:4px 12px; border-radius:4px; font-size:12px; cursor:pointer; font-family:Georgia,serif;
+          white-space:nowrap;
+        ">${cumpriu ? '✓ Cumpriu 30d' : '✗ Pendente'}</button>
+      </td>
+    </tr>`;
+  }).join("");
+}
+
+async function toggleFerias30(id) {
+  const e = DB.find(x => String(x.id) === String(id));
+  if (!e) return;
+  const novo = e.ferias30 === "SIM" ? "NÃO" : "SIM";
+  const data = { ...e, ferias30: novo };
+  setSaving(true);
+  try {
+    const res = await apiWrite({ action:"update", data });
+    if (res && res.error) throw new Error(res.error);
+    const idx = DB.findIndex(x => String(x.id) === String(id));
+    if (idx >= 0) DB[idx] = { ...DB[idx], ferias30: novo };
+    renderFerias();
+    showToast(novo === "SIM" ? "Marcado: cumpriu 30 dias!" : "Desmarcado.");
+  } catch(err) {
+    showToast("Erro: " + err.message, "err");
+  }
+  setSaving(false);
 }
 
 function populateSegFilter() {
@@ -671,7 +708,7 @@ function openNew() {
 }
 
 function openEdit(id) {
-  const e = DB.find(x => x.id === id);
+  const e = DB.find(x => String(x.id) === String(id));
   if (!e) return;
   editId = id;
   FIELDS.forEach(f => {
@@ -704,7 +741,7 @@ async function handleSave() {
       data.id = editId;
       const res = await apiWrite({ action:"update", data });
       if (res.error) throw new Error(res.error);
-      const idx = DB.findIndex(e=>e.id===editId);
+      const idx = DB.findIndex(e => String(e.id) === String(editId));
       if (idx>=0) DB[idx] = { ...DB[idx], ...data };
       showToast("Atualizado com sucesso!");
     } else {
@@ -727,7 +764,7 @@ async function handleSave() {
 // ═══════════════════════════════════════════════════════
 function confirmDelete() { confirmDeleteById(editId); }
 function confirmDeleteById(id) {
-  const e = DB.find(x=>x.id===id);
+  const e = DB.find(x => String(x.id) === String(id));
   if (!e) return;
   pendingDeleteId = id;
   document.getElementById("modal-msg").innerHTML = `Remover <strong style="color:var(--text)">${e.nome}</strong>? Essa ação não pode ser desfeita.`;
@@ -736,19 +773,22 @@ function confirmDeleteById(id) {
 }
 function closeModal() {
   document.getElementById("modal-overlay").classList.remove("open");
-  pendingDeleteId = null;
+  // NÃO zeramos pendingDeleteId aqui — doDelete ainda precisa dele
 }
 async function doDelete() {
-  closeModal();
+  const idToDelete = pendingDeleteId; // captura antes de qualquer reset
+  document.getElementById("modal-overlay").classList.remove("open");
   setSaving(true);
   try {
-    const res = await apiWrite({ action:"delete", id: pendingDeleteId });
+    const res = await apiWrite({ action:"delete", id: idToDelete });
     if (res && res.error) throw new Error(res.error);
-    DB = DB.filter(e => String(e.id) !== String(pendingDeleteId));
+    DB = DB.filter(e => String(e.id) !== String(idToDelete));
+    pendingDeleteId = null;
     renderAll();
-    showToast("Removido.", "err");
+    showToast("Removido com sucesso!");
     if (document.getElementById("view-form").style.display !== "none") switchView("lista");
   } catch(e) {
+    pendingDeleteId = null;
     showToast("Erro ao remover: "+e.message, "err");
   }
   setSaving(false);
@@ -804,4 +844,5 @@ window.addEventListener("DOMContentLoaded", () => {
 });
 </script>
 </body>
+</html>
 </html>
